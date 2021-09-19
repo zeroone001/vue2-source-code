@@ -60,6 +60,7 @@ export default class Watcher {
     }
     vm._watchers.push(this)
     // options
+    // 下面是watcher的配置
     if (options) {
       this.deep = !!options.deep
       this.user = !!options.user
@@ -69,9 +70,11 @@ export default class Watcher {
     } else {
       this.deep = this.user = this.lazy = this.sync = false
     }
+
     this.cb = cb
     this.id = ++uid // uid for batching
     this.active = true
+    // 用来做缓存的
     this.dirty = this.lazy // for lazy watchers
     this.deps = []
     this.newDeps = []
@@ -81,6 +84,7 @@ export default class Watcher {
       ? expOrFn.toString()
       : ''
     // parse expression for getter
+    // 这里就是把函数传给getter
     if (typeof expOrFn === 'function') {
       this.getter = expOrFn
     } else {
@@ -171,6 +175,10 @@ export default class Watcher {
    */
   /* 
     派发更新
+    当计算属性中用到的数据发生变化时，计算属性的watcher实例就会执行watcher.update()方法，
+    在update方法中会判断当前的watcher是不是计算属性的watcher，
+    如果是则调用getAndInvoke去对比计算属性的返回值是否发生了变化，如果真的发生变化，
+    则执行回调，通知那些读取计算属性的watcher重新执行渲染逻辑。
   */
   update () {
     /* istanbul ignore else */
@@ -225,6 +233,8 @@ export default class Watcher {
   /**
    * Depend on all deps collected by this watcher.
    */
+  // 会将读取计算属性的那个watcher添加到计算属性的watcher实例的依赖列表中，当计算属性中用到的数据发生变化时
+  // ，计算属性的watcher实例就会执行watcher.update()方法
   depend () {
     let i = this.deps.length
     while (i--) {

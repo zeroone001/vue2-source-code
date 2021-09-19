@@ -56,7 +56,11 @@ export function initState (vm: Component) {
   } else {
     observe(vm._data = {}, true /* asRootData */)
   }
+
+  /* 计算属性 */
   if (opts.computed) initComputed(vm, opts.computed)
+
+
   if (opts.watch && opts.watch !== nativeWatch) {
     initWatch(vm, opts.watch)
   }
@@ -202,6 +206,7 @@ export function getData (data: Function, vm: Component): any {
 
 const computedWatcherOptions = { lazy: true }
 
+/* 计算属性的定义 */
 function initComputed (vm: Component, computed: Object) {
   // $flow-disable-line
   const watchers = vm._computedWatchers = Object.create(null)
@@ -209,7 +214,9 @@ function initComputed (vm: Component, computed: Object) {
   const isSSR = isServerRendering()
 
   for (const key in computed) {
+    // 拿到那个函数
     const userDef = computed[key]
+    // 判断是不是函数，当然也可以是对象，平时写函数是比较多的
     const getter = typeof userDef === 'function' ? userDef : userDef.get
     if (process.env.NODE_ENV !== 'production' && getter == null) {
       warn(
@@ -217,7 +224,7 @@ function initComputed (vm: Component, computed: Object) {
         vm
       )
     }
-
+    // 这个位置是关键
     if (!isSSR) {
       // create internal watcher for the computed property.
       watchers[key] = new Watcher(
@@ -231,7 +238,10 @@ function initComputed (vm: Component, computed: Object) {
     // component-defined computed properties are already defined on the
     // component prototype. We only need to define computed properties defined
     // at instantiation here.
+    // 这里的意思是computed里面定义的key的名字是不能跟data或者props里面的key冲突的
     if (!(key in vm)) {
+      // 下面进入关键代码
+      // 为实例vm上设置计算属性
       defineComputed(vm, key, userDef)
     } else if (process.env.NODE_ENV !== 'production') {
       if (key in vm.$data) {
@@ -244,18 +254,25 @@ function initComputed (vm: Component, computed: Object) {
     }
   }
 }
-
+// 作用是为target上定义一个属性key，并且属性key的getter和setter根据userDef的值来设置
 export function defineComputed (
   target: any,
   key: string,
   userDef: Object | Function
 ) {
+  // 判断是否应该有缓存，只有在非服务器下，才是TRUE
   const shouldCache = !isServerRendering()
+
   if (typeof userDef === 'function') {
+    // sharedPropertyDefinition 是一个默认的属性描述符
+    // 也就是说，在浏览器环境下，走了 createComputedGetter 函数
+    // 因为userDef只是一个普通的getter，它并没有缓存功能，
+    // 所以我们需要额外创建一个具有缓存功能的getter， createComputedGetter
     sharedPropertyDefinition.get = shouldCache
       ? createComputedGetter(key)
       : createGetterInvoker(userDef)
     sharedPropertyDefinition.set = noop
+
   } else {
     sharedPropertyDefinition.get = userDef.get
       ? shouldCache && userDef.cache !== false
@@ -273,10 +290,15 @@ export function defineComputed (
       )
     }
   }
+  // 属性key绑定到target上，其中的属性描述符就是上面设置的sharedPropertyDefinition。
+  // 如此以来，就将 计算属性 绑定到实例 vm 上了
   Object.defineProperty(target, key, sharedPropertyDefinition)
 }
 
+// 这是，我们访问conputed的值的时候，出现的逻辑
 function createComputedGetter (key) {
+  // 当获取计算属性的值时会执行属性的getter，而属性的getter就是 sharedPropertyDefinition.get，
+  // 也就是说最终执行的 computedGetter函数
   return function computedGetter () {
     const watcher = this._computedWatchers && this._computedWatchers[key]
     if (watcher) {
@@ -286,6 +308,7 @@ function createComputedGetter (key) {
       if (Dep.target) {
         watcher.depend()
       }
+      // 将evaluate方法的返回值作为计算属性的计算结果返回
       return watcher.value
     }
   }

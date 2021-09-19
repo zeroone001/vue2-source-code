@@ -21,6 +21,7 @@ const methodsToPatch = [
 /**
  * Intercept mutating methods and emit events
  */
+/* def 作用是定义一个property */
 methodsToPatch.forEach(function (method) {
   // cache original method
   const original = arrayProto[method]
@@ -39,6 +40,7 @@ methodsToPatch.forEach(function (method) {
     }
     if (inserted) ob.observeArray(inserted)
     // notify change
+    /* 这里很关键， 通知watcher更新 */
     ob.dep.notify()
     return result
   })

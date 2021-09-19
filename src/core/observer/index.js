@@ -214,7 +214,7 @@ export function defineReactive (
         
         */
         dep.depend()
-
+        /* 下面这个比较关键 */
         if (childOb) {
           childOb.dep.depend()
           if (Array.isArray(value)) {
