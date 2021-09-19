@@ -84,6 +84,12 @@ if (typeof Promise !== 'undefined' && isNative(Promise)) {
   }
 }
 
+/* 
+  把传入的回调函数 cb 压入 callbacks 数组，
+  最后一次性地根据 useMacroTask 条件执行 macroTimerFunc 或者是 microTimerFunc，
+  而它们都会在下一个 tick 执行 flushCallbacks，flushCallbacks 的逻辑非常简单，
+  对 callbacks 遍历，然后执行相应的回调函数
+*/
 export function nextTick (cb?: Function, ctx?: Object) {
   let _resolve
   callbacks.push(() => {

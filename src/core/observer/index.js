@@ -63,12 +63,17 @@ export class Observer {
 
 
     if (Array.isArray(value)) {
+
+      // 判断对象上是否有原型，也就是说，判断浏览器支持原型链不
       if (hasProto) {
+        // 把方法放在这个数组的原型链上
+        // 其实是改写了这个数组上的方法，这样的话使用push就会变化
         protoAugment(value, arrayMethods)
       } else {
         copyAugment(value, arrayMethods, arrayKeys)
       }
       this.observeArray(value)
+
     } else {
       // data 是个对象
       // 给每个属性加上响应式
@@ -264,12 +269,16 @@ export function set (target: Array<any> | Object, key: any, val: any): any {
   ) {
     warn(`Cannot set reactive property on undefined, null, or primitive value: ${(target: any)}`)
   }
+  /* 判断是不是一个数组，并且判断key 是否正确 */
   if (Array.isArray(target) && isValidArrayIndex(key)) {
+    /* 先修改了数组的长度 */
     target.length = Math.max(target.length, key)
     target.splice(key, 1, val)
     return val
   }
+  /* 先判断在不在这个对象里，并且不能在原型上，直接 */
   if (key in target && !(key in Object.prototype)) {
+
     target[key] = val
     return val
   }
@@ -281,12 +290,15 @@ export function set (target: Array<any> | Object, key: any, val: any): any {
     )
     return val
   }
+  /* 这里判断，这个target 是不是响应式的，不是的话，直接设置值 */
   if (!ob) {
     target[key] = val
     return val
   }
+  /* 下面两行是关键 */
   defineReactive(ob.value, key, val)
   ob.dep.notify()
+
   return val
 }
 
