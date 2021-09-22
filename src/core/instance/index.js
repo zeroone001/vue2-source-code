@@ -15,7 +15,19 @@ function Vue (options) {
 }
 
 initMixin(Vue)
+
+/* 
+  stateMixin 函数
+  在Vue.prototype 上定义了方法
+  
+  $data
+  $props
+  $set
+  $delete
+  $watch
+*/
 stateMixin(Vue)
+
 eventsMixin(Vue)
 
 

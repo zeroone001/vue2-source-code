@@ -70,6 +70,7 @@ export function initGlobalAPI (Vue: GlobalAPI) {
 
   // Vue.use
   initUse(Vue)
+  
   // Vue.mixin
   initMixin(Vue)
 

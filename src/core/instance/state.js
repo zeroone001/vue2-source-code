@@ -60,7 +60,7 @@ export function initState (vm: Component) {
   /* 计算属性 */
   if (opts.computed) initComputed(vm, opts.computed)
 
-
+  /* 监听属性 */
   if (opts.watch && opts.watch !== nativeWatch) {
     initWatch(vm, opts.watch)
   }
@@ -348,9 +348,15 @@ function initMethods (vm: Component, methods: Object) {
   }
 }
 
+/* 
+  初始化所有的watch
+  下面两个函数是watch相关的函数
+
+*/
 function initWatch (vm: Component, watch: Object) {
   for (const key in watch) {
     const handler = watch[key]
+
     if (Array.isArray(handler)) {
       for (let i = 0; i < handler.length; i++) {
         createWatcher(vm, key, handler[i])
@@ -361,19 +367,27 @@ function initWatch (vm: Component, watch: Object) {
   }
 }
 
+/* 
+  对每一个watcher 进行create
+  expOrFn 就是key
+  handler
+*/
 function createWatcher (
   vm: Component,
   expOrFn: string | Function,
   handler: any,
   options?: Object
 ) {
+
   if (isPlainObject(handler)) {
     options = handler
     handler = handler.handler
   }
   if (typeof handler === 'string') {
+    // 把methods给到handler
     handler = vm[handler]
   }
+
   return vm.$watch(expOrFn, handler, options)
 }
 
@@ -385,6 +399,7 @@ export function stateMixin (Vue: Class<Component>) {
   dataDef.get = function () { return this._data }
   const propsDef = {}
   propsDef.get = function () { return this._props }
+
   if (process.env.NODE_ENV !== 'production') {
     dataDef.set = function () {
       warn(
@@ -403,18 +418,32 @@ export function stateMixin (Vue: Class<Component>) {
   Vue.prototype.$set = set
   Vue.prototype.$delete = del
 
+  /* 
+      作用： 定义$watch
+      expOrFn 这个是watch的key
+      cb 是watch的处理函数
+
+      Watcher 定义在observe里面
+
+  */
   Vue.prototype.$watch = function (
     expOrFn: string | Function,
     cb: any,
     options?: Object
   ): Function {
     const vm: Component = this
+
+    /* 判断是否是对象 */
     if (isPlainObject(cb)) {
       return createWatcher(vm, expOrFn, cb, options)
     }
+
     options = options || {}
     options.user = true
+    /* 这是关键代码，创建一个watcher实例 */
     const watcher = new Watcher(vm, expOrFn, cb, options)
+
+    /* 立即执行监听函数 */
     if (options.immediate) {
       const info = `callback for immediate watcher "${watcher.expression}"`
       pushTarget()
