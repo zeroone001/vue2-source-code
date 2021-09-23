@@ -67,7 +67,6 @@ export function setCurrentRenderingInstance (vm: Component) {
 
 /*  
   index.js 里面使用  
-
 */
 export function renderMixin (Vue: Class<Component>) {
   // install runtime convenience helpers
