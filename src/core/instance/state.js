@@ -348,9 +348,11 @@ function initMethods (vm: Component, methods: Object) {
   }
 }
 
+
+
 /* 
   初始化所有的watch
-  下面两个函数是watch相关的函数
+  下面三个函数是watch相关的函数
 
 */
 function initWatch (vm: Component, watch: Object) {

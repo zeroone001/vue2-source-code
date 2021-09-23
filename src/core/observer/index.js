@@ -264,25 +264,43 @@ export function defineReactive (
  * already exist.
  */
 export function set (target: Array<any> | Object, key: any, val: any): any {
+
+  /* 首先判断在非生产环境下如果传入的target是否为undefined、null或是原始类型，如果是，则抛出警告 */
   if (process.env.NODE_ENV !== 'production' &&
     (isUndef(target) || isPrimitive(target))
   ) {
     warn(`Cannot set reactive property on undefined, null, or primitive value: ${(target: any)}`)
   }
+
   /* 判断是不是一个数组，并且判断key 是否正确 */
   if (Array.isArray(target) && isValidArrayIndex(key)) {
-    /* 先修改了数组的长度 */
+    /* 
+      取最大的值作为数组新的长度
+      先修改了数组的长度 
+    */
     target.length = Math.max(target.length, key)
+    // 将元素添加进数组里面
+    /* 
+      为什么这里就这么简单结束了呐
+      因为splice方法被我们的拦截器重写了
+      也就是说，当我们使用splice，往数组内添加元素的时候，这个元素自动变成响应式的
+    */
     target.splice(key, 1, val)
     return val
   }
-  /* 先判断在不在这个对象里，并且不能在原型上，直接 */
-  if (key in target && !(key in Object.prototype)) {
 
+  /* 
+    先判断在不在这个对象里，并且不能在原型上，
+    如果存在的话，直接修改属性值就行了
+  */
+  if (key in target && !(key in Object.prototype)) {
     target[key] = val
     return val
   }
+  /* ob 是否为true 决定target是否为响应式对象 */
   const ob = (target: any).__ob__
+
+  /* 如果是Vue实例，或者是根数据对象，就会报错 */
   if (target._isVue || (ob && ob.vmCount)) {
     process.env.NODE_ENV !== 'production' && warn(
       'Avoid adding reactive properties to a Vue instance or its root $data ' +
@@ -290,13 +308,23 @@ export function set (target: Array<any> | Object, key: any, val: any): any {
     )
     return val
   }
-  /* 这里判断，这个target 是不是响应式的，不是的话，直接设置值 */
+  /* 
+    这里判断，这个target 是不是响应式的，
+    不是的话，直接设置值， 
+    不用将属性设置为响应式的
+  */
   if (!ob) {
     target[key] = val
     return val
   }
-  /* 下面两行是关键 */
+
+  /* 
+    前面代码是铺垫
+    下面两行是关键 
+  */
+  // 添加属性，并且转化为响应式
   defineReactive(ob.value, key, val)
+  // 通知依赖更新
   ob.dep.notify()
 
   return val
@@ -312,6 +340,7 @@ export function del (target: Array<any> | Object, key: any) {
     warn(`Cannot delete reactive property on undefined, null, or primitive value: ${(target: any)}`)
   }
   if (Array.isArray(target) && isValidArrayIndex(key)) {
+    // 因为数组的splice方法已经被我们创建的拦截器重写了，所以使用该方法会自动通知相关依赖
     target.splice(key, 1)
     return
   }
@@ -326,12 +355,16 @@ export function del (target: Array<any> | Object, key: any) {
   if (!hasOwn(target, key)) {
     return
   }
+  // 删除属性
   delete target[key]
+  // 如果不是响应式的对象，就简单的删除一下属性
   if (!ob) {
     return
   }
+  // 通知依赖更新
   ob.dep.notify()
 }
+
 
 /**
  * Collect dependencies on array elements when the array is touched, since

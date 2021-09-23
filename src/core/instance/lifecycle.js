@@ -95,6 +95,10 @@ export function lifecycleMixin (Vue: Class<Component>) {
     // updated in a parent's updated hook.
   }
 
+  /* 
+    当前实例的_watcher属性就是该实例的watcher，所以要想让实例重新渲染，
+    我们只需手动的去执行一下实例watcher的update方法即可
+  */
   Vue.prototype.$forceUpdate = function () {
     const vm: Component = this
     if (vm._watcher) {

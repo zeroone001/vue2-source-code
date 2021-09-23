@@ -62,6 +62,7 @@ export default class Watcher {
     // options
     // 下面是watcher的配置
     if (options) {
+      /* deep 深度监听 */
       this.deep = !!options.deep
       this.user = !!options.user
       this.lazy = !!options.lazy
@@ -76,6 +77,10 @@ export default class Watcher {
     this.active = true
     // 用来做缓存的
     this.dirty = this.lazy // for lazy watchers
+    /* 
+      watcher实例记录自己依赖了哪些数据其实就是
+      把这些数据的依赖管理器dep存放在watcher实例的this.deps = []属性中 
+    */
     this.deps = []
     this.newDeps = []
     this.depIds = new Set()
@@ -83,8 +88,9 @@ export default class Watcher {
     this.expression = process.env.NODE_ENV !== 'production'
       ? expOrFn.toString()
       : ''
+      
     // parse expression for getter
-    // 这里就是把函数传给getter
+    // 这里就是把函数传给 getter
     if (typeof expOrFn === 'function') {
       this.getter = expOrFn
     } else {
@@ -99,10 +105,11 @@ export default class Watcher {
         )
       }
     }
+
     this.value = this.lazy
       ? undefined
       : this.get()
-  }
+  } // constructor end
 
   /**
    * Evaluate the getter, and re-collect dependencies.
@@ -122,6 +129,9 @@ export default class Watcher {
     } finally {
       // "touch" every property so they are all tracked as
       // dependencies for deep watching
+      /* 
+        “触摸”每个属性，以便将它们全部作为深度监视的依赖项进行跟踪
+      */
       if (this.deep) {
         traverse(value)
       }
@@ -245,6 +255,10 @@ export default class Watcher {
   /**
    * Remove self from all dependencies' subscriber list.
    */
+  /* 
+    teardown 拆卸
+    取消监听
+  */
   teardown () {
     if (this.active) {
       // remove self from vm's watcher list

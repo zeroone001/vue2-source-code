@@ -16,6 +16,7 @@ function Vue (options) {
 
 initMixin(Vue)
 
+/* 下面的函数，都是设置实例上的方法 */
 /* 
   stateMixin 函数
   在Vue.prototype 上定义了方法
@@ -28,11 +29,16 @@ initMixin(Vue)
 */
 stateMixin(Vue)
 
+// 分别是vm.$on、vm.$emit、vm.$off和vm.$once
 eventsMixin(Vue)
 
 
 /* 下面都是往prototype上定义一些方法 */
-/* 主要定义了 vm._update */
+/* 
+  主要定义了 vm._update
+  $forceUpdate
+  $destroy
+   */
 lifecycleMixin(Vue)
 
 /* 

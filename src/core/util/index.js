@@ -2,7 +2,8 @@
 
 export * from 'shared/util'
 
-/* def  */
+/* def 
+parsePath */
 export * from './lang'
 export * from './env'
 // mergeOptions
@@ -10,6 +11,7 @@ export * from './env'
 export * from './options'
 export * from './debug'
 export * from './props'
+// invokeWithErrorHandling
 export * from './error'
 export * from './next-tick'
 export { defineReactive } from '../observer/index'
