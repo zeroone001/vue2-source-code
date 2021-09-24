@@ -12,6 +12,7 @@ let pending = false
 
 function flushCallbacks () {
   pending = false
+  // 这里浅拷贝了一下
   const copies = callbacks.slice(0)
   callbacks.length = 0
   for (let i = 0; i < copies.length; i++) {
@@ -39,7 +40,15 @@ let timerFunc
 // completely stops working after triggering a few times... so, if native
 // Promise is available, we will use it:
 /* istanbul ignore next, $flow-disable-line */
+/* 
+  Vue 在内部对异步队列尝试使用原生的 Promise.then、MutationObserver 和 setImmediate，
+  如果执行环境不支持，则会采用 setTimeout(fn, 0) 代替
+  宏任务耗费的时间是大于微任务的，所以在浏览器支持的情况下，优先使用微任务。如果浏览器不支持微任务，使用宏任务；
+  但是，各种宏任务之间也有效率的不同，需要根据浏览器的支持情况，使用不同的宏任务
+*/
+/* 优先使用微任务 */
 if (typeof Promise !== 'undefined' && isNative(Promise)) {
+  /* 微任务 */
   const p = Promise.resolve()
   timerFunc = () => {
     p.then(flushCallbacks)
@@ -56,6 +65,7 @@ if (typeof Promise !== 'undefined' && isNative(Promise)) {
   // PhantomJS and iOS 7.x
   MutationObserver.toString() === '[object MutationObserverConstructor]'
 )) {
+  /* 微任务 */
   // Use MutationObserver where native Promise is not available,
   // e.g. PhantomJS, iOS7, Android 4.4
   // (#6466 MutationObserver is unreliable in IE11)
@@ -71,6 +81,7 @@ if (typeof Promise !== 'undefined' && isNative(Promise)) {
   }
   isUsingMicroTask = true
 } else if (typeof setImmediate !== 'undefined' && isNative(setImmediate)) {
+  /* 宏任务 */
   // Fallback to setImmediate.
   // Technically it leverages the (macro) task queue,
   // but it is still a better choice than setTimeout.
@@ -79,6 +90,7 @@ if (typeof Promise !== 'undefined' && isNative(Promise)) {
   }
 } else {
   // Fallback to setTimeout.
+  /* 宏任务 */
   timerFunc = () => {
     setTimeout(flushCallbacks, 0)
   }
@@ -92,6 +104,7 @@ if (typeof Promise !== 'undefined' && isNative(Promise)) {
 */
 export function nextTick (cb?: Function, ctx?: Object) {
   let _resolve
+  // 把回调函数放到回调队列中
   callbacks.push(() => {
     if (cb) {
       try {
@@ -108,6 +121,7 @@ export function nextTick (cb?: Function, ctx?: Object) {
     timerFunc()
   }
   // $flow-disable-line
+  // 这是当 nextTick 不传 cb 参数的时候，提供一个 Promise 化的调用，比如：
   if (!cb && typeof Promise !== 'undefined') {
     return new Promise(resolve => {
       _resolve = resolve
