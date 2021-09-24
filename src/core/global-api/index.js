@@ -51,7 +51,11 @@ export function initGlobalAPI (Vue: GlobalAPI) {
   //   observe(obj)
   //   return obj
   // }
-
+  /* 
+    定义了一个options空对象
+    options里面定义了 directives 空对象
+    directives 就是用来存放指令的位置
+  */
   Vue.options = Object.create(null)
   ASSET_TYPES.forEach(type => {
     Vue.options[type + 's'] = Object.create(null)
