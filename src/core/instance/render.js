@@ -69,9 +69,15 @@ export function setCurrentRenderingInstance (vm: Component) {
   index.js 里面使用  
 */
 export function renderMixin (Vue: Class<Component>) {
+  /* 
+    render函数的一些方法
+    比如处理过滤器resolveFilter
+  */
   // install runtime convenience helpers
   installRenderHelpers(Vue.prototype)
 
+
+  /* vm.$nextTick 在这里定义的 */
   Vue.prototype.$nextTick = function (fn: Function) {
     return nextTick(fn, this)
   }

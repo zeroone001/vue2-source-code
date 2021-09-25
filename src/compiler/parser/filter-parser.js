@@ -2,6 +2,17 @@
 
 const validDivisionCharRE = /[\w).+\-_$\]]/
 
+/* 
+
+  该函数的作用的是将传入的
+  形如'message | capitalize'这样的过滤器字符串转化成_f("capitalize")(message)
+  该函数接收一个形如`'message | capitalize'`这样的过滤器字符串作为，
+  最终将其转化成`_f("capitalize")(message)`输出。
+  在`parseFilters`函数的内部是通过遍历传入的过滤器字符串每一个字符，根据每一个字符是否是一些特殊的字符从而作出不同的处理，
+  最终，从传入的过滤器字符串中解析出待处理的表达式`expression`和所有的过滤器`filters`数组。
+
+  最后，将解析得到的`expression`和`filters`数组通过调用`wrapFilter`函数将其构造成`_f`函数调用字符串。
+*/
 export function parseFilters (exp: string): string {
   let inSingle = false
   let inDouble = false
@@ -13,6 +24,9 @@ export function parseFilters (exp: string): string {
   let lastFilterIndex = 0
   let c, prev, i, expression, filters
 
+  /* 
+    从头遍历，exp的每一个字符
+  */
   for (i = 0; i < exp.length; i++) {
     prev = c
     c = exp.charCodeAt(i)

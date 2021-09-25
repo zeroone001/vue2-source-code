@@ -449,24 +449,47 @@ export function mergeOptions (
  * This function is used because child instances need access
  * to assets defined in its ancestor chain.
  */
+/* 
+  调用该函数时传入了 4 个参数，
+  分别是当前实例的 $options 属性， type 为 filters ， 
+  id 为当前过滤器的 id
+*/
 export function resolveAsset (
   options: Object,
   type: string,
   id: string,
   warnMissing?: boolean
 ): any {
-  /* istanbul ignore if */
+  
+  /* ID必须是一个字符串 */
   if (typeof id !== 'string') {
     return
   }
+  /* 
+    获取type对应的对象
+  */
   const assets = options[type]
+
   // check local registration variations first
+  /* 
+    如果有这个属性的话，直接返回值
+  */
   if (hasOwn(assets, id)) return assets[id]
+  /* 
+    中横线转化成驼峰式，再返回
+  */
   const camelizedId = camelize(id)
   if (hasOwn(assets, camelizedId)) return assets[camelizedId]
+  /* 
+    转化成首字母大写
+  */
   const PascalCaseId = capitalize(camelizedId)
   if (hasOwn(assets, PascalCaseId)) return assets[PascalCaseId]
   // fallback to prototype chain
+  /* 
+    再从原型链中查找
+    如果还是找不到，就抛出警告
+   */
   const res = assets[id] || assets[camelizedId] || assets[PascalCaseId]
   if (process.env.NODE_ENV !== 'production' && warnMissing && !res) {
     warn(
