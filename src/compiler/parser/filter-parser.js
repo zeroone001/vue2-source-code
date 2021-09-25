@@ -98,6 +98,7 @@ export function parseFilters (exp: string): string {
   return expression
 }
 
+
 function wrapFilter (exp: string, filter: string): string {
   const i = filter.indexOf('(')
   if (i < 0) {
