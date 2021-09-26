@@ -17,20 +17,34 @@ type PropOptions = {
   required: ?boolean,
   validator: ?Function
 };
-
+/* 
+  校验props的类型是否正确
+  并且返回value的值
+  key： props的key
+  propOptions: 子组件的props对象
+  propsData： 父组件的数据对象
+  vm： Vue实例
+*/
 export function validateProp (
   key: string,
   propOptions: Object,
   propsData: Object,
   vm?: Component
 ): any {
+  /* 当前key在propOptions中对应的值 */
   const prop = propOptions[key]
+  /* 父组件是否传入了该属性 */
   const absent = !hasOwn(propsData, key)
+  /* 前key在propsData中对应的值，即父组件对于该属性传入的真实值*/
   let value = propsData[key]
+
+
   // boolean casting
+  /* 判断是不是布尔类型 */
   const booleanIndex = getTypeIndex(Boolean, prop.type)
   if (booleanIndex > -1) {
     if (absent && !hasOwn(prop, 'default')) {
+      /* 父组件没有传入该prop属性并且该属性也没有默认值的时候 */
       value = false
     } else if (value === '' || value === hyphenate(key)) {
       // only cast empty string / same name to boolean if
@@ -42,7 +56,14 @@ export function validateProp (
     }
   }
   // check default value
+  /* 
+    只需判断父组件是否传入该属性即可
+  */
   if (value === undefined) {
+    /* 
+      父组件没有传入值的话，获取默认值
+      并且转化为响应式
+    */
     value = getPropDefaultValue(vm, prop, key)
     // since the default value is a fresh copy,
     // make sure to observe it.
@@ -64,13 +85,23 @@ export function validateProp (
 /**
  * Get the default value of a prop.
  */
+/* 
+  获取props的默认值
+*/
 function getPropDefaultValue (vm: ?Component, prop: PropOptions, key: string): any {
   // no default, return undefined
+  /* 
+    没有定义default的话，就直接返回undefined
+  */
   if (!hasOwn(prop, 'default')) {
     return undefined
   }
   const def = prop.default
   // warn against non-factory defaults for Object & Array
+  /* 
+    这里default的值，不能直接写成一个对象
+    默认对象或者数组，必须从一个工厂函数中获取
+  */
   if (process.env.NODE_ENV !== 'production' && isObject(def)) {
     warn(
       'Invalid default value for prop "' + key + '": ' +
@@ -89,6 +120,11 @@ function getPropDefaultValue (vm: ?Component, prop: PropOptions, key: string): a
   }
   // call factory function for non-Function types
   // a value is Function if its prototype is function even across different execution context
+  /* 
+    判断def是否为函数并且prop.type不为Function，
+    如果是的话表明def是一个返回对象或数组的工厂函数，
+    那么将函数的返回值作为默认值返回；如果def不是函数，那么则将def作为默认值返回
+  */
   return typeof def === 'function' && getType(prop.type) !== 'Function'
     ? def.call(vm)
     : def
