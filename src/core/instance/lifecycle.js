@@ -29,6 +29,12 @@ export function setActiveInstance(vm: Component) {
   }
 }
 
+/* 
+  代码不多
+  主要是挂载了一些默认属性
+  $parent
+  $root
+*/
 export function initLifecycle (vm: Component) {
   const options = vm.$options
 
@@ -373,7 +379,8 @@ export function deactivateChildComponent (vm: Component, direct?: boolean) {
 }
 /* 
   callhook 函数，
-
+  触发生命周期钩子函数
+  比较简单，就是遍历数组，执行钩子函数
 */
 export function callHook (vm: Component, hook: string) {
   // #7573 disable dep collection when invoking lifecycle hooks
@@ -386,6 +393,7 @@ export function callHook (vm: Component, hook: string) {
   if (handlers) {
     for (let i = 0, j = handlers.length; i < j; i++) {
       // 在这个函数里面执行call， 钩子函数
+      /* 遍历数组，把每一个钩子函数都执行一遍 */
       invokeWithErrorHandling(handlers[i], vm, null, vm, info)
     }
   }

@@ -9,10 +9,20 @@ import {
 } from '../util/index'
 import { updateListeners } from '../vdom/helpers/index'
 
+/* 
+
+*/
 export function initEvents (vm: Component) {
+  /* initEvents函数逻辑非常简单，首先在vm上新增_events属性并将其赋值为空对象
+    用来存储事件的
+  */
   vm._events = Object.create(null)
   vm._hasHookEvent = false
   // init parent attached events
+  /* 
+  获取父组件注册的事件赋给listeners，如果listeners不为空，
+  则调用updateComponentListeners函数，
+  将父组件向子组件注册的事件注册到子组件的实例中 */
   const listeners = vm.$options._parentListeners
   if (listeners) {
     updateComponentListeners(vm, listeners)
@@ -45,6 +55,13 @@ export function updateComponentListeners (
   oldListeners: ?Object
 ) {
   target = vm
+  /* 
+  该函数的作用是对比listeners和oldListeners的不同，
+  并调用参数中提供的add和remove进行相应的注册事件和卸载事件。
+  其思想是：如果listeners对象中存在某个key（即事件名）而oldListeners中不存在，
+  则说明这个事件是需要新增的；
+  反之，如果oldListeners对象中存在某个key（即事件名）
+  而listeners中不存在，则说明这个事件是需要从事件系统中卸载的 */
   updateListeners(listeners, oldListeners || {}, add, remove, createOnceHandler, vm)
   target = undefined
 }

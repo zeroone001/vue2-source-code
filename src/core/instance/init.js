@@ -15,8 +15,10 @@ let uid = 0
 
 /* 
   这里的这个options是指，用户new Vue({}) 实例化的时候，里面的这个对象
+  initMixin 函数只做了一件事，就是在Vue的原型上绑定_init 方法
 */
 export function initMixin (Vue: Class<Component>) {
+
   Vue.prototype._init = function (options?: Object) {
     const vm: Component = this
     // a uid
@@ -68,25 +70,25 @@ export function initMixin (Vue: Class<Component>) {
 
     // expose real self
     vm._self = vm
-
-    /* 生命周期 */
+    /* 下面是一堆初始化函数， 来初始化一些属性，方法等 */
+    /* 初始化生命周期 */
     initLifecycle(vm)
+    // 初始化事件
     initEvents(vm)
-
     /* 关键 render  */
     initRender(vm)
-
-
+    // 触发生命周期钩子函数
     callHook(vm, 'beforeCreate')
+    
     initInjections(vm) // resolve injections before data/props
-
     /* 
       data, props, computed, methods, watch 等等 
     */
     initState(vm)
-
-    initProvide(vm) // resolve provide after data/props
-    
+    // 初始化 provide
+    // resolve provide after data/props
+    initProvide(vm) 
+    // 触发生命周期钩子函数
     callHook(vm, 'created')
 
     /* istanbul ignore if */
@@ -98,12 +100,18 @@ export function initMixin (Vue: Class<Component>) {
     /* 
         如果不直接写 $mount 的话， 那么这里是代码挂载的开始
         关键的关键
+        在所有的初始化工作都完成以后，最后，会判断用户是否传入了el选项，
+        如果传入了则调用$mount函数进入模板编译与挂载阶段，
+        如果没有传入el选项，则不进入下一个生命周期阶段，
+        需要用户手动执行vm.$mount方法才进入下一个生命周期阶段。
     */
     if (vm.$options.el) {
       vm.$mount(vm.$options.el)
     }
     // end
   }
+
+
 }
 
 export function initInternalComponent (vm: Component, options: InternalComponentOptions) {

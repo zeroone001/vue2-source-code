@@ -69,6 +69,10 @@ export function initGlobalAPI (Vue: GlobalAPI) {
 
 
   // 这里扩展内置组件<transition>
+  /* 
+    把<keep-alive>、<transition> 和<transition-group> 组件
+    扩展到Vue.options.components上，这样在所有的组件里都可以使用啦
+  */
   extend(Vue.options.components, builtInComponents)
 
 

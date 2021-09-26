@@ -147,6 +147,7 @@ function mergeHook (
   parentVal: ?Array<Function>,
   childVal: ?Function | ?Array<Function>
 ): ?Array<Function> {
+  /* 注意，相同的钩子函数，是合并成一个数组的 */
   const res = childVal
     ? parentVal
       ? parentVal.concat(childVal)
@@ -389,6 +390,8 @@ function assertObjectType (name: string, value: any, vm: ?Component) {
 /* 
   这个函数挺常用的
   合并options
+  把parent和child这两个对象，根据合并策略，
+  合并成一个新的对象，并且返回
 */
 export function mergeOptions (
   parent: Object,
@@ -412,6 +415,7 @@ export function mergeOptions (
   // but only if it is a raw options object that isn't
   // the result of another mergeOptions call.
   // Only merged options has the _base property.
+
   /* 这里是递归调用，有extends 或者 mixins */
   if (!child._base) {
     if (child.extends) {
@@ -436,11 +440,16 @@ export function mergeOptions (
     }
   }
   function mergeField (key) {
-    /* strat 实际上是一个函数，通过不同的key,去用不同的函数 */
+    /* 
+      strat 实际上是一个函数，通过不同的key,去用不同的函数 
+      根据不同的key 是有不同的合并策略的
+      设计模式中的【策略】模式
+    */
     const strat = strats[key] || defaultStrat
     /* 这里进行合并 */
     options[key] = strat(parent[key], child[key], vm, key)
   }
+
   return options
 }
 

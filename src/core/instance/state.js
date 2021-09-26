@@ -47,6 +47,9 @@ export function proxy (target: Object, sourceKey: string, key: string) {
 }
 
 export function initState (vm: Component) {
+  /* 
+    用来存储当前实例的
+  */
   vm._watchers = []
   const opts = vm.$options
   if (opts.props) initProps(vm, opts.props)
