@@ -169,18 +169,27 @@ function initProps (vm: Component, propsOptions: Object) {
 
 /* 
   初始化 data
-
+  1. 判断data 是否合法
+  2. 转化成响应式
+  3. 绑定到vm实例上，也就是proxy代理
 */
 function initData (vm: Component) {
 
   /* 获取data，建议使用函数的形式，挂载到_data上 */
   let data = vm.$options.data
+  /* 
+    如果是工厂函数，就执行，获取返回值
+  */
   data = vm._data = typeof data === 'function'
     ? getData(data, vm)
     : data || {}
 
 
-  /* 判断是不是一个对象，否则就报错 */
+  /* 
+    判断是不是一个对象，否则就报错
+    data函数的返回值需要是一个对象，否则就会报错
+    无论传入的data选项是不是一个函数，它最终的值都应该是一个对象
+   */
   if (!isPlainObject(data)) {
     data = {}
     process.env.NODE_ENV !== 'production' && warn(
@@ -189,8 +198,6 @@ function initData (vm: Component) {
       vm
     )
   }
-
-
   // proxy data on instance
   /* 
     下面是用来判断，data ,props, 还有methods 不能重名
@@ -202,7 +209,9 @@ function initData (vm: Component) {
   while (i--) {
     const key = keys[i]
     if (process.env.NODE_ENV !== 'production') {
+
       if (methods && hasOwn(methods, key)) {
+        /* 是否跟methods重名 */
         warn(
           `Method "${key}" has already been defined as a data property.`,
           vm
@@ -211,31 +220,30 @@ function initData (vm: Component) {
     }
 
     if (props && hasOwn(props, key)) {
+      /* 是否跟props重名 */
       process.env.NODE_ENV !== 'production' && warn(
         `The data property "${key}" is already declared as a prop. ` +
         `Use prop default value instead.`,
         vm
       )
     } else if (!isReserved(key)) {
-      /* 这里是关键 */
-
+      /* 判断key不是 _或者$ 开头的属性 */
       /* 
-      
-      响应式，代理key
-      
+        代理key
+        this.key === this._data.key
       */
-
       proxy(vm, `_data`, key)
     }
   }
-
-
-  // observe data
-  /* 观察者 到了 */
-
+  /* 
+    观察者 到了
+    把data 里面的属性转化为响应式
+  */
   observe(data, true /* asRootData */)
 }
-
+/* 
+  getData 执行传入的函数，返回值
+*/
 export function getData (data: Function, vm: Component): any {
   // #7573 disable dep collection when invoking data getters
   pushTarget()
@@ -251,18 +259,26 @@ export function getData (data: Function, vm: Component): any {
 
 const computedWatcherOptions = { lazy: true }
 
-/* 计算属性的定义 */
+/* 
+  计算属性的初始化
+  计算属性的结果会被缓存
+ */
 function initComputed (vm: Component, computed: Object) {
   // $flow-disable-line
   const watchers = vm._computedWatchers = Object.create(null)
   // computed properties are just getters during SSR
   const isSSR = isServerRendering()
+  /* 
+    开始遍历computed里面的每一项属性
 
+  */
   for (const key in computed) {
-    // 拿到那个函数
+    // 拿到key对应的值
     const userDef = computed[key]
     // 判断是不是函数，当然也可以是对象，平时写函数是比较多的
+    /* 如果不是函数，就吧对象里的get返回 */
     const getter = typeof userDef === 'function' ? userDef : userDef.get
+    /* 这里正常来说getter 是个undefined，但是用了两个等号，所以undefined == null 为TRUE */
     if (process.env.NODE_ENV !== 'production' && getter == null) {
       warn(
         `Getter is missing for computed property "${key}".`,
@@ -272,6 +288,10 @@ function initComputed (vm: Component, computed: Object) {
     // 这个位置是关键
     if (!isSSR) {
       // create internal watcher for the computed property.
+      /* 
+        创建一个watcher实例
+        并且放到对象watchers上面
+      */
       watchers[key] = new Watcher(
         vm,
         getter || noop,
@@ -279,16 +299,16 @@ function initComputed (vm: Component, computed: Object) {
         computedWatcherOptions
       )
     }
-
-    // component-defined computed properties are already defined on the
-    // component prototype. We only need to define computed properties defined
-    // at instantiation here.
     // 这里的意思是computed里面定义的key的名字是不能跟data或者props里面的key冲突的
+    /* 
+      判断这个key在不在实例上面
+    */
     if (!(key in vm)) {
       // 下面进入关键代码
       // 为实例vm上设置计算属性
       defineComputed(vm, key, userDef)
     } else if (process.env.NODE_ENV !== 'production') {
+      /* 下面三个判断就是判断在具体的哪个地方定义了相同的名字 */
       if (key in vm.$data) {
         warn(`The computed property "${key}" is already defined in data.`, vm)
       } else if (vm.$options.props && key in vm.$options.props) {
@@ -299,13 +319,21 @@ function initComputed (vm: Component, computed: Object) {
     }
   }
 }
+
 // 作用是为target上定义一个属性key，并且属性key的getter和setter根据userDef的值来设置
+/* 
+  给实例vm上设置计算属性
+  target , vm 实例
+  key: computed的属性
+  userDef： computed的值
+*/
 export function defineComputed (
   target: any,
   key: string,
   userDef: Object | Function
 ) {
   // 判断是否应该有缓存，只有在非服务器下，才是TRUE
+  /* 只有在非服务器环境下才会有缓存 */
   const shouldCache = !isServerRendering()
 
   if (typeof userDef === 'function') {
@@ -316,9 +344,11 @@ export function defineComputed (
     sharedPropertyDefinition.get = shouldCache
       ? createComputedGetter(key)
       : createGetterInvoker(userDef)
+
     sharedPropertyDefinition.set = noop
 
   } else {
+    /* userDef为对象 */
     sharedPropertyDefinition.get = userDef.get
       ? shouldCache && userDef.cache !== false
         ? createComputedGetter(key)
@@ -337,10 +367,14 @@ export function defineComputed (
   }
   // 属性key绑定到target上，其中的属性描述符就是上面设置的sharedPropertyDefinition。
   // 如此以来，就将 计算属性 绑定到实例 vm 上了
+  // 属性key绑定到target上
   Object.defineProperty(target, key, sharedPropertyDefinition)
 }
 
 // 这是，我们访问conputed的值的时候，出现的逻辑
+/* 
+  最终把computedGetter给到了属性描述符的get
+*/
 function createComputedGetter (key) {
   // 当获取计算属性的值时会执行属性的getter，而属性的getter就是 sharedPropertyDefinition.get，
   // 也就是说最终执行的 computedGetter函数
@@ -365,10 +399,15 @@ function createGetterInvoker(fn) {
   }
 }
 
+/* 
+  初始化方法
+*/
 function initMethods (vm: Component, methods: Object) {
   const props = vm.$options.props
+  /* 开始遍历methods */
   for (const key in methods) {
     if (process.env.NODE_ENV !== 'production') {
+      /* 如果methods不是函数的话，就报错 */
       if (typeof methods[key] !== 'function') {
         warn(
           `Method "${key}" has type "${typeof methods[key]}" in the component definition. ` +
@@ -376,12 +415,15 @@ function initMethods (vm: Component, methods: Object) {
           vm
         )
       }
+      /* methods如果跟props重名，就报错 */
       if (props && hasOwn(props, key)) {
         warn(
           `Method "${key}" has already been defined as a prop.`,
           vm
         )
       }
+      // 如果在实例中已经存在，并且方法名是以_或$开头的，就抛出错误
+      // isReserved函数是用来判断字符串是否以_或$开头
       if ((key in vm) && isReserved(key)) {
         warn(
           `Method "${key}" conflicts with an existing Vue instance method. ` +
@@ -389,6 +431,7 @@ function initMethods (vm: Component, methods: Object) {
         )
       }
     }
+    /* 把函数绑定到实例上 */
     vm[key] = typeof methods[key] !== 'function' ? noop : bind(methods[key], vm)
   }
 }

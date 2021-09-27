@@ -133,6 +133,11 @@ function getPropDefaultValue (vm: ?Component, prop: PropOptions, key: string): a
 /**
  * Assert whether a prop is valid.
  */
+/* 
+
+  absent： 父组件是否传入了这个属性，取的是非
+*/
+
 function assertProp (
   prop: PropOptions,
   name: string,
@@ -140,6 +145,7 @@ function assertProp (
   vm: ?Component,
   absent: boolean
 ) {
+  /* 父组件没传，但是，是必须的，那么就会报错 */
   if (prop.required && absent) {
     warn(
       'Missing required prop: "' + name + '"',
@@ -147,9 +153,11 @@ function assertProp (
     )
     return
   }
+
   if (value == null && !prop.required) {
     return
   }
+  
   let type = prop.type
   let valid = !type || type === true
   const expectedTypes = []
