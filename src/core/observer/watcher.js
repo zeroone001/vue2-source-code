@@ -105,7 +105,7 @@ export default class Watcher {
         )
       }
     }
-
+    /* 这里调用了get方法 */
     this.value = this.lazy
       ? undefined
       : this.get()
@@ -115,10 +115,17 @@ export default class Watcher {
    * Evaluate the getter, and re-collect dependencies.
    */
   get () {
+    /* 这里把实例放到了Dep.target */
     pushTarget(this)
     let value
     const vm = this.vm
     try {
+      /* 
+        获取被依赖的数据，目的是为了触发数据的getter
+        调用index.js 里面的getter之后，
+        会触发dep.depend()
+        然后再执行watcher里面的 addDep 方法，就在下面
+       */
       value = this.getter.call(vm, vm)
     } catch (e) {
       if (this.user) {
@@ -135,6 +142,7 @@ export default class Watcher {
       if (this.deep) {
         traverse(value)
       }
+      /* 这里再释放 */
       popTarget()
       this.cleanupDeps()
     }
@@ -153,6 +161,7 @@ export default class Watcher {
       this.newDepIds.add(id)
       this.newDeps.push(dep)
       if (!this.depIds.has(id)) {
+        /* 执行Dep里面的addSub 方法，把这个实例放到依赖数组里 */
         dep.addSub(this)
       }
     }
@@ -198,7 +207,10 @@ export default class Watcher {
       /* 同步过程 */
       this.run()
     } else {
-      /* 主要是这个， 队列 */
+      /* 
+      主要是这个， 队列
+      派发视图更新
+       */
       queueWatcher(this)
     }
   }

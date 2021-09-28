@@ -28,23 +28,16 @@ export function toggleObserving (value: boolean) {
   shouldObserve = value
 }
 
-/**
- * Observer class that is attached to each observed
- * object. Once attached, the observer converts the target
- * object's property keys into getter/setters that
- * collect dependencies and dispatch updates.
- */
 /* 
   附加到每个观察对象的观察者类
   收集依赖，并发送更新
-
-
+  听过递归的方式，把一个对象的所有属性转化为可观测的对象
+  只要我们将一个object传到observer中，那么这个object就会变成可观测的、响应式的object
 */
 export class Observer {
   value: any;
   dep: Dep;
   vmCount: number; // number of vms that have this object as root $data
-
   constructor (value: any) {
     this.value = value
     /* 
@@ -52,28 +45,34 @@ export class Observer {
     */
     this.dep = new Dep()
     this.vmCount = 0
-
     /* 
       def 就是用defineProperty 封装一下
       给value添加一个属性，值就是这个实例
       __ob__ 这个属性就是不可以枚举的
       到时候在下面遍历的时候，就不会有影响了
+      相当于给value打上标记，表示已经被转化成响应式了，避免重复操作
     */
     def(value, '__ob__', this)
-
-
+    /* 
+      开始判断数据的类型
+      只有object类型的数据才会调用walk将每一个属性转换成getter/setter的形式来侦测变化
+      注意这里，因为Object.defineProperty 是针对对象的，数组是无法使用这个方法的
+      所以，走的是另外的变化机制
+    */
     if (Array.isArray(value)) {
-
       // 判断对象上是否有原型，也就是说，判断浏览器支持原型链不
       if (hasProto) {
         // 把方法放在这个数组的原型链上
         // 其实是改写了这个数组上的方法，这样的话使用push就会变化
+        /* 
+          把重写的一些方法，挂载到数组的原型链上
+        */
         protoAugment(value, arrayMethods)
       } else {
         copyAugment(value, arrayMethods, arrayKeys)
       }
+      //  对数组深度侦测
       this.observeArray(value)
-
     } else {
       // data 是个对象
       // 给每个属性加上响应式
@@ -82,9 +81,9 @@ export class Observer {
   }
 
   /**
-   * Walk through all properties and convert them into
-   * getter/setters. This method should only be called when
-   * value type is Object.
+    遍历所有的key，然后执行defineReactive
+    当值还是object的时候，再使用new Observer进行递归
+    这样我们就可以把obj中的所有属性（包括子属性）都转换成getter/seter的形式来侦测变化
    */
   walk (obj: Object) {
     const keys = Object.keys(obj)
@@ -94,20 +93,19 @@ export class Observer {
   }
 
   /**
-   * Observe a list of Array items.
+   * 对数组深度侦测，如果数组的元素是对象，也能侦测到
    */
   observeArray (items: Array<any>) {
     for (let i = 0, l = items.length; i < l; i++) {
+      /* 给那些元素是对象的item，加上Observer */
       observe(items[i])
     }
   }
+
 }
-
 // helpers
-
 /**
- * Augment a target Object or Array by intercepting
- * the prototype chain using __proto__
+  挂载，把重写后的方法，挂载到原型链上
  */
 function protoAugment (target, src: Object) {
   /* eslint-disable no-proto */
@@ -137,13 +135,13 @@ function copyAugment (target: Object, src: Object, keys: Array<string>) {
     创建观察者实例
     观察成功，返回新的观察者
     或者现有的观察者
-
 */
 export function observe (value: any, asRootData: ?boolean): Observer | void {
   if (!isObject(value) || value instanceof VNode) {
     return
   }
   let ob: Observer | void
+  /* 有__ob__的话，表示已经是响应式了 */
   if (hasOwn(value, '__ob__') && value.__ob__ instanceof Observer) {
     // 存在的话，就直接返回
     ob = value.__ob__
@@ -155,6 +153,9 @@ export function observe (value: any, asRootData: ?boolean): Observer | void {
     !value._isVue
   ) {
     // 不存在的话，就new一个观察者实例
+    /* 
+      递归调用
+    */
     ob = new Observer(value)
   }
   if (asRootData && ob) {
@@ -174,7 +175,9 @@ export function defineReactive (
   shallow?: boolean
 ) {
 
-  /* 收集依赖的核心 */
+  /* 
+    实例化一个依赖管理器，生成一个依赖管理的数组dep
+  */
   const dep = new Dep()
 
   const property = Object.getOwnPropertyDescriptor(obj, key)
@@ -189,7 +192,11 @@ export function defineReactive (
     val = obj[key]
   }
 
-  /* 如果值是对象的话，对val进行递归调用 */
+  /* 
+    如果值是对象的话，对val进行递归调用
+    这里主要是解决child的观察
+    利用了递归
+  */
   let childOb = !shallow && observe(val)
   /* 
     defineProperty
@@ -199,19 +206,16 @@ export function defineReactive (
     configurable: true,
     /* 
       这里就是传说中的getter 和 setter了
-    
-    
+      在get中收集依赖
     */
     get: function reactiveGetter () {
       /* get 部分 */
-
       const value = getter ? getter.call(obj) : val
       if (Dep.target) {
         /* 
-        
         依赖收集
         调用watcher的addDep方法
-        
+        使用depend收集依赖
         */
         dep.depend()
         /* 下面这个比较关键 */
@@ -226,6 +230,7 @@ export function defineReactive (
 
     },
     set: function reactiveSetter (newVal) {
+      /* 在set里面通知依赖更新 */
       const value = getter ? getter.call(obj) : val
       /* eslint-disable no-self-compare */
       /* 
@@ -252,6 +257,7 @@ export function defineReactive (
       /* 
         派发更新
         这是关键
+        通知所有依赖更新
       */
       dep.notify()
     }
