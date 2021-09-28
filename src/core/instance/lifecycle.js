@@ -111,39 +111,57 @@ export function lifecycleMixin (Vue: Class<Component>) {
       vm._watcher.update()
     }
   }
-
+/* 
+  生命周期，销毁阶段
+*/
   Vue.prototype.$destroy = function () {
     const vm: Component = this
+    /* 
+      判断当前实例是否处于正在被销毁的阶段
+      如果是TRUE，直接return退出
+     */
     if (vm._isBeingDestroyed) {
       return
     }
+    /* 标志着正式进入销毁阶段 */
     callHook(vm, 'beforeDestroy')
+    /* 设置为TRUE */
     vm._isBeingDestroyed = true
-    // remove self from parent
+    /* 
+      目的，从父级实例中删除
+    */    
     const parent = vm.$parent
     if (parent && !parent._isBeingDestroyed && !vm.$options.abstract) {
+      /* 如果有父实例，父级实例没有被销毁，并且不是抽象的，那么就把vm移除 */
       remove(parent.$children, vm)
     }
-    // teardown watchers
+
+    // 将实例自身从其他数据的依赖列表中删除
     if (vm._watcher) {
+      /* teardown方法的作用是从所有依赖向的Dep列表中将自己删除 */
       vm._watcher.teardown()
     }
+    /* 
+    所有实例内的数据对其他数据的依赖都会存放在实例的_watchers属性中，
+    所以我们只需遍历_watchers，
+    将其中的每一个watcher都调用teardown方法，
+    从而实现移除实例内数据对其他数据的依赖。
+     */
     let i = vm._watchers.length
     while (i--) {
       vm._watchers[i].teardown()
     }
-    // remove reference from data ob
-    // frozen object may not have observer.
+    // 移除实例内响应式数据的引
     if (vm._data.__ob__) {
       vm._data.__ob__.vmCount--
     }
-    // call the last hook...
+    // 给当前实例上添加_isDestroyed属性来表示当前实例已经被销毁，
     vm._isDestroyed = true
-    // invoke destroy hooks on current rendered tree
+    // 同时将实例的VNode树设置为null
     vm.__patch__(vm._vnode, null)
-    // fire destroyed hook
+    // 触发生命周期钩子函数destroyed
     callHook(vm, 'destroyed')
-    // turn off all instance listeners.
+    // 移除实例上的所有事件监听器
     vm.$off()
     // remove __vue__ reference
     if (vm.$el) {
@@ -157,13 +175,9 @@ export function lifecycleMixin (Vue: Class<Component>) {
 }
 
 /* 
-
 $mount 的最后执行函数
-
 挂载函数，
 beforeMount 就在这里
-
-
 */
 export function mountComponent (
   vm: Component,
@@ -172,7 +186,10 @@ export function mountComponent (
 ): Component {
   vm.$el = el
 
-  /* 下面这个代码是为了报警告的 */
+  /* 
+    判断是否存在render函数，
+    如果不存在的话，就创建一个默认的渲染函数createEmptyVNode
+  */
   if (!vm.$options.render) {
     vm.$options.render = createEmptyVNode
     if (process.env.NODE_ENV !== 'production') {
@@ -193,13 +210,13 @@ export function mountComponent (
       }
     }
   }
-
-  // 声明周期
+  /* 
+    触发beforeMount生命周期钩子函数
+    标志着正式开始挂载操作
+  */
   callHook(vm, 'beforeMount')
-
   /* 下面这段代码是指性能分析performance */
   let updateComponent
-  /* istanbul ignore if */
   if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
     updateComponent = () => {
       const name = vm._name
@@ -218,23 +235,35 @@ export function mountComponent (
       measure(`vue ${name} patch`, startTag, endTag)
     }
   } else {
-
-
-    /* 这里是渲染， render 关键中的关键 
+    /* 
+      关键中的关键 
       vm._render() 生成虚拟DOM
       vm._update() 来更新DOM
+      定义函数updateComponent
+      先执行vm._render()， 得到最新的VNode节点树
+      然后执行vm._update，
+      对最新的VNode节点树与上一次渲染的旧VNode节点树进行对比并更新DOM节点(即patch操作)，
+      完成一次渲染
     */
+   /* 
+    如果调用了函数updateComponent，就会把模板内容渲染到页面视图上
+   */
     updateComponent = () => {
       vm._update(vm._render(), hydrating)
     }
   }
-
-  // we set this to vm._watcher inside the watcher's constructor
-  // since the watcher's initial patch may call $forceUpdate (e.g. inside child
-  // component's mounted hook), which relies on vm._watcher being already defined
   /* 
     渲染watcher
+    不仅要渲染视图，还要开启对数据的监控
+    当数据发生变化的时候，要通知其依赖进行更新
+    想要开启监控，下面这行代码是关键
    */
+  /* 把updateComponent函数作为第二个参数传给Watcher类从而创建了watcher实例，
+  那么updateComponent函数中读取的所有数据都将被watcher所监控，
+  这些数据中只要有任何一个发生了变化，
+  那么watcher都将会得到通知，
+  从而会去调用第四个参数回调函数去更新视图
+  ，如此反复，直到实例被销毁。 */
   new Watcher(vm, updateComponent, noop, {
     before () {
       if (vm._isMounted && !vm._isDestroyed) {
@@ -242,6 +271,7 @@ export function mountComponent (
       }
     }
   }, true /* isRenderWatcher */)
+
   hydrating = false
 
   // manually mounted instance, call mounted on self
@@ -251,8 +281,10 @@ export function mountComponent (
     /* 
       挂载完成的时候
     */
+  //  到这里，挂载阶段也就完成了
     callHook(vm, 'mounted')
   }
+  // 把实例返回
   return vm
 }
 
