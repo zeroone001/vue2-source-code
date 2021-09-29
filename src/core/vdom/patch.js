@@ -99,11 +99,12 @@ export function createPatchFunction (backend) {
     remove.listeners = listeners
     return remove
   }
-
+  /* 超级简单的删除节点 */
   function removeNode (el) {
     const parent = nodeOps.parentNode(el)
     // element may have already been removed due to v-html / v-text
     if (isDef(parent)) {
+      // 直接removeChild删除节点
       nodeOps.removeChild(parent, el)
     }
   }
@@ -129,8 +130,10 @@ export function createPatchFunction (backend) {
     /* 
       在这里，这个函数非常重要
       把虚拟DOM挂载到真实DOM上
-    isDef 这个是isDefine 的意思
-    parentElm 这个也就是body
+      isDef 这个是isDefine 的意思
+      parentElm 这个也就是body
+      代码中的nodeOps是Vue为了跨平台兼容性，对所有节点操作进行了封装，
+      例如nodeOps.createTextNode()在浏览器端等同于document.createTextNode()
     */
   function createElm (
     vnode,
@@ -141,7 +144,6 @@ export function createPatchFunction (backend) {
     ownerArray,
     index
   ) {
-    
     if (isDef(vnode.elm) && isDef(ownerArray)) {
       // This vnode was used in a previous render!
       // now it's used as a new node, overwriting its elm would cause
@@ -150,19 +152,17 @@ export function createPatchFunction (backend) {
       // associated DOM element for it.
       vnode = ownerArray[index] = cloneVNode(vnode)
     }
-
     vnode.isRootInsert = !nested // for transition enter check
-
     // 如果这个VNode是组件VNode的时候
     if (createComponent(vnode, insertedVnodeQueue, parentElm, refElm)) {
       return
     }
-
     const data = vnode.data
     const children = vnode.children
     const tag = vnode.tag
-    if (isDef(tag)) {
 
+    /* 判断是否是元素节点，其实只要有tag就行 */
+    if (isDef(tag)) {
       if (process.env.NODE_ENV !== 'production') {
         if (data && data.pre) {
           creatingElmInVPre++
@@ -179,7 +179,7 @@ export function createPatchFunction (backend) {
         }
 
       }
-
+      /* 创建tag节点 */
       vnode.elm = vnode.ns
         ? nodeOps.createElementNS(vnode.ns, tag)
         : nodeOps.createElement(tag, vnode)
@@ -205,6 +205,7 @@ export function createPatchFunction (backend) {
           insert(parentElm, vnode.elm, refElm)
         }
       } else {
+        // 通常元素节点还会有子节点，那就递归遍历创建所有子节点
         createChildren(vnode, children, insertedVnodeQueue)
         if (isDef(data)) {
           invokeCreateHooks(vnode, insertedVnodeQueue)
@@ -212,6 +213,7 @@ export function createPatchFunction (backend) {
         // 插入，
         /* 
           其实就是insertBefore,这里就是插入了
+          将所有子节点创建好之后insert插入到当前元素节点里面，最后把当前元素节点插入到DOM中。
         */
         insert(parentElm, vnode.elm, refElm)
       }
@@ -220,12 +222,16 @@ export function createPatchFunction (backend) {
         creatingElmInVPre--
       }
     } else if (isTrue(vnode.isComment)) {
+      // 判断是否为注释节点
+      // 创建注释节点
       vnode.elm = nodeOps.createComment(vnode.text)
-
+      // 插入到DOM中
       insert(parentElm, vnode.elm, refElm)
     } else {
+      /* 最后这个就是文本节点 */
+      // 创建文本节点
       vnode.elm = nodeOps.createTextNode(vnode.text)
-
+      // 插入到DOM中
       insert(parentElm, vnode.elm, refElm)
     }
   }
@@ -533,6 +539,10 @@ export function createPatchFunction (backend) {
       if (isDef(c) && sameVnode(node, c)) return i
     }
   }
+  /* 
+    这里就是大名鼎鼎的patch，
+    更新节点
+  */
 
   function patchVnode (
     oldVnode,
@@ -542,6 +552,7 @@ export function createPatchFunction (backend) {
     index,
     removeOnly
   ) {
+    /* 如果完全相等，就直接return */
     if (oldVnode === vnode) {
       return
     }
@@ -550,9 +561,10 @@ export function createPatchFunction (backend) {
       // clone reused vnode
       vnode = ownerArray[index] = cloneVNode(vnode)
     }
-
+    // 首先取一下真实DOM
     const elm = vnode.elm = oldVnode.elm
 
+      
     if (isTrue(oldVnode.isAsyncPlaceholder)) {
       if (isDef(vnode.asyncFactory.resolved)) {
         hydrate(oldVnode.elm, vnode, insertedVnodeQueue)
@@ -562,10 +574,7 @@ export function createPatchFunction (backend) {
       return
     }
 
-    // reuse element for static trees.
-    // note we only do this if the vnode is cloned -
-    // if the new node is not cloned it means the render functions have been
-    // reset by the hot-reload-api and we need to do a proper re-render.
+    // // 是否都是静态节点
     if (isTrue(vnode.isStatic) &&
       isTrue(oldVnode.isStatic) &&
       vnode.key === oldVnode.key &&
@@ -587,7 +596,9 @@ export function createPatchFunction (backend) {
       for (i = 0; i < cbs.update.length; ++i) cbs.update[i](oldVnode, vnode)
       if (isDef(i = data.hook) && isDef(i = i.update)) i(oldVnode, vnode)
     }
+    // 判断有没有text属性，如果没有
     if (isUndef(vnode.text)) {
+      // 是否都存在子节点
       if (isDef(oldCh) && isDef(ch)) {
         if (oldCh !== ch) updateChildren(elm, oldCh, ch, insertedVnodeQueue, removeOnly)
       } else if (isDef(ch)) {
@@ -602,6 +613,7 @@ export function createPatchFunction (backend) {
         nodeOps.setTextContent(elm, '')
       }
     } else if (oldVnode.text !== vnode.text) {
+      // 如果VNode是text类型，直接创建
       nodeOps.setTextContent(elm, vnode.text)
     }
     if (isDef(data)) {
