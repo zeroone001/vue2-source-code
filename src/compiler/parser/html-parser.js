@@ -14,16 +14,22 @@ import { isNonPhrasingTag } from 'web/compiler/util'
 import { unicodeRegExp } from 'core/util/lang'
 
 // Regular Expressions for parsing tags and attributes
+/* 解析属性 */
 const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
 const dynamicArgAttribute = /^\s*((?:v-[\w-]+:|@|:|#)\[[^=]+?\][^\s"'<>\/=]*)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
+/*  */
 const ncname = `[a-zA-Z_][\\-\\.0-9_a-zA-Z${unicodeRegExp.source}]*`
 const qnameCapture = `((?:${ncname}\\:)?${ncname})`
+/* 匹配开始标签 */
 const startTagOpen = new RegExp(`^<${qnameCapture}`)
+
 const startTagClose = /^\s*(\/?)>/
 const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`)
 const doctype = /^<!DOCTYPE [^>]+>/i
 // #7298: escape - to avoid being passed as HTML comment when inlined in page
+/* 解析HTML注释 */
 const comment = /^<!\--/
+// 解析条件注释
 const conditionalComment = /^<!\[/
 
 // Special Elements (can contain anything)
@@ -65,35 +71,48 @@ export function parseHTML (html, options) {
       let textEnd = html.indexOf('<')
       if (textEnd === 0) {
         // Comment:
+        /* 在这里处理HTML注释 */
         if (comment.test(html)) {
-          const commentEnd = html.indexOf('-->')
-
+          /* 寻找闭合的注释 */
+          const commentEnd = html.indexOf('-->');
+          // 如果找到闭合的注释
           if (commentEnd >= 0) {
+            /* 下面这个判断的作用是，在生成真实DOM结构的时候，要不要保留注释 */
             if (options.shouldKeepComment) {
+              // 若保留注释，则把注释截取出来传给options.comment，创建注释类型的AST节点
+              /* 
+                把html从第4位（"<!--"长度为4）开始截取，
+                直到-->处，截取得到的内容就是注释的真实内容，
+                然后调用4个钩子函数中的comment函数，
+                将真实的注释内容传进去，创建注释类型的AST节点
+              */
               options.comment(html.substring(4, commentEnd), index, index + commentEnd + 3)
             }
+            // 若不保留注释，则将游标移动到'-->'之后，继续向后解析
+            // advance 是用来移动游标的，解析完一部分就把游标向后移动一部分
             advance(commentEnd + 3)
             continue
           }
         }
 
         // http://en.wikipedia.org/wiki/Conditional_comment#Downlevel-revealed_conditional_comment
+        /* 解析条件注释， */
         if (conditionalComment.test(html)) {
           const conditionalEnd = html.indexOf(']>')
 
           if (conditionalEnd >= 0) {
+            // 移动游标
             advance(conditionalEnd + 2)
             continue
           }
         }
-
         // Doctype:
+        /* 解析DOCTYPE */
         const doctypeMatch = html.match(doctype)
         if (doctypeMatch) {
           advance(doctypeMatch[0].length)
           continue
         }
-
         // End tag:
         const endTagMatch = html.match(endTag)
         if (endTagMatch) {
@@ -104,8 +123,10 @@ export function parseHTML (html, options) {
         }
 
         // Start tag:
+        /* 解析开始标签 */
         const startTagMatch = parseStartTag()
         if (startTagMatch) {
+          /* 解析开始标签成功，就执行下面的函数，也就是调用start函数 */
           handleStartTag(startTagMatch)
           if (shouldIgnoreFirstNewline(startTagMatch.tagName, html)) {
             advance(1)
@@ -186,21 +207,44 @@ export function parseHTML (html, options) {
 
   function parseStartTag () {
     const start = html.match(startTagOpen)
+    /* 如果存在开始标签 */
+    /*   // '<div></div>'.match(startTagOpen)  => ['<div','div',index:0,input:'<div></div>'] */
     if (start) {
       const match = {
         tagName: start[1],
         attrs: [],
         start: index
       }
+      /* 移动游标到标签属性的位置 */
       advance(start[0].length)
       let end, attr
+      /* 提取所有的属性包含 v-bind等等 */
+      /**
+       * <div a=1 b=2 c=3></div>
+       * 从<div之后到开始标签的结束符号'>'之前，一直匹配属性attrs
+       * 所有属性匹配完之后，html字符串还剩下
+       * 自闭合标签剩下：'/>'
+       * 非自闭合标签剩下：'></div>'
+       */
       while (!(end = html.match(startTagClose)) && (attr = html.match(dynamicArgAttribute) || html.match(attribute))) {
         attr.start = index
+        // 继续移动游标
         advance(attr[0].length)
         attr.end = index
         match.attrs.push(attr)
       }
+      // startTagClose处理闭合标签的
+      /* 根据匹配结果的end[1]是否是""我们即可判断出当前标签是否为自闭合标签 */
+      /**
+       * 这里判断了该标签是否为自闭合标签
+       * 自闭合标签如:<input type='text' />
+       * 非自闭合标签如:<div></div>
+       * '></div>'.match(startTagClose) => [">", "", index: 0, input: "></div>", groups: undefined]
+       * '/><div></div>'.match(startTagClose) => ["/>", "/", index: 0, input: "/><div></div>", groups: undefined]
+       * 因此，我们可以通过end[1]是否是"/"来判断该标签是否是自闭合标签
+       */
       if (end) {
+        // 下面是对自闭合标签的处理
         match.unarySlash = end[1]
         advance(end[0].length)
         match.end = index
@@ -209,9 +253,10 @@ export function parseHTML (html, options) {
     }
   }
 
+  /* 再处理一下提取出来的标签属性数组 */
   function handleStartTag (match) {
-    const tagName = match.tagName
-    const unarySlash = match.unarySlash
+    const tagName = match.tagName /* 开始标签的标签名 */
+    const unarySlash = match.unarySlash /* 是否为自闭合标签的标志，自闭合为"",非自闭合为"/" */
 
     if (expectHTML) {
       if (lastTag === 'p' && isNonPhrasingTag(tagName)) {
@@ -222,16 +267,24 @@ export function parseHTML (html, options) {
       }
     }
 
-    const unary = isUnaryTag(tagName) || !!unarySlash
+    const unary = isUnaryTag(tagName) || !!unarySlash /* 布尔值，标志是否为自闭合标签 */
 
-    const l = match.attrs.length
-    const attrs = new Array(l)
+    const l = match.attrs.length /* match.attrs 数组的长度 */
+    const attrs = new Array(l)  /* 一个与match.attrs数组长度相等的数组 */
+    /* 循环处理提取出来的标签属性数组match.attrs */
     for (let i = 0; i < l; i++) {
       const args = match.attrs[i]
       const value = args[3] || args[4] || args[5] || ''
+      /* 接着定义了shouldDecodeNewlines，这个常量主要是做一些兼容性处理， 
+      如果 shouldDecodeNewlines 为 true，意味着 Vue 在编译模板的时候，
+      要对属性值中的换行符或制表符做兼容处理。
+      而shouldDecodeNewlinesForHref为true 意味着Vue在编译模板的时候，
+      要对a标签的 href属性值中的换行符或制表符做兼容处理。 */
       const shouldDecodeNewlines = tagName === 'a' && args[1] === 'href'
         ? options.shouldDecodeNewlinesForHref
         : options.shouldDecodeNewlines
+      
+      // 将处理好的结果存入之前定义好的与match.attrs数组长度相等的attrs数组中
       attrs[i] = {
         name: args[1],
         value: decodeAttr(value, shouldDecodeNewlines)
@@ -241,13 +294,14 @@ export function parseHTML (html, options) {
         attrs[i].end = args.end
       }
     }
-
+    // 如果该标签是非自闭合标签，则将标签推入栈中
     if (!unary) {
       stack.push({ tag: tagName, lowerCasedTag: tagName.toLowerCase(), attrs: attrs, start: match.start, end: match.end })
       lastTag = tagName
     }
-
+    // 如果该标签是自闭合标签，现在就可以调用start钩子函数并传入处理好的参数来创建AST节点了
     if (options.start) {
+      // 开始调用start函数，生成AST
       options.start(tagName, attrs, unary, match.start, match.end)
     }
   }

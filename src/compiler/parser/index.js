@@ -76,6 +76,10 @@ export function createASTElement (
 /**
  * Convert HTML string to AST.
  */
+/* 
+  这个文件里的主函数
+  把HTML模板转化为AST树
+*/
 export function parse (
   template: string,
   options: CompilerOptions
@@ -204,7 +208,10 @@ export function parse (
       )
     }
   }
-
+  /* 
+    template:待转换的模板字符串；
+    options:转换时所需的选项；
+   */
   parseHTML(template, {
     warn,
     expectHTML: options.expectHTML,
@@ -214,6 +221,15 @@ export function parse (
     shouldDecodeNewlinesForHref: options.shouldDecodeNewlinesForHref,
     shouldKeepComment: options.comments,
     outputSourceRange: options.outputSourceRange,
+    /* 
+      下面这四个钩子函数，就是把提取出来的内容生成AST
+    */
+    // 当解析到开始标签时调用start函数生成元素类型的AST节点
+    /* 
+      tag: 标签名
+      attrs: 标签属性
+      unary: 标签是否自闭合
+    */
     start (tag, attrs, unary, start, end) {
       // check namespace.
       // inherit parent ns if there is one
@@ -224,7 +240,7 @@ export function parse (
       if (isIE && ns === 'svg') {
         attrs = guardIESVGBug(attrs)
       }
-
+      // 调用createASTElement函数来创建元素类型的AST节点
       let element: ASTElement = createASTElement(tag, attrs, currentParent)
       if (ns) {
         element.ns = ns
@@ -300,7 +316,9 @@ export function parse (
         closeElement(element)
       }
     },
-
+    /* 
+      当解析到结束标签时调用end函数
+    */
     end (tag, start, end) {
       const element = stack[stack.length - 1]
       // pop stack
@@ -311,7 +329,9 @@ export function parse (
       }
       closeElement(element)
     },
-
+    /* 
+      解析到文本时候，调用chars函数，生成文本类型的AST节点
+    */
     chars (text: string, start: number, end: number) {
       if (!currentParent) {
         if (process.env.NODE_ENV !== 'production') {
@@ -361,6 +381,7 @@ export function parse (
         }
         let res
         let child: ?ASTNode
+        // 如果遇到文本信息，就会调用文本解析器parseText函数进行文本解析
         if (!inVPre && text !== ' ' && (res = parseText(text, delimiters))) {
           child = {
             type: 2,
@@ -383,6 +404,7 @@ export function parse (
         }
       }
     },
+    /* 解析到注释的时候，调用comment 函数，生成注释类型的AST节点 */
     comment (text: string, start, end) {
       // adding anything as a sibling to the root node is forbidden
       // comments should still be allowed, but ignored
@@ -779,6 +801,7 @@ function processAttrs (el) {
       }
       if (bindRE.test(name)) { // v-bind
         name = name.replace(bindRE, '')
+        // 如果遇到文本中包含过滤器，就会调用过滤器解析器parseFilters函数进行解析
         value = parseFilters(value)
         isDynamic = dynamicArgRE.test(name)
         if (isDynamic) {
