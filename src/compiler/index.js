@@ -12,6 +12,7 @@ export const createCompiler = createCompilerCreator(function baseCompile (
   template: string,
   options: CompilerOptions
 ): CompiledResult {
+  // parse 会用正则等方式解析 template 模板中的指令、class、style等数据，形成AST
   const ast = parse(template.trim(), options)
   if (options.optimize !== false) {
     optimize(ast, options)

@@ -87,7 +87,8 @@ Vue.prototype.$mount = function (
       if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
         mark('compile')
       }
-      /* 主要在compileToFunctions这个函数中进行的
+      /* 
+        主要在compileToFunctions这个函数中进行的
         返回render这个函数，
         然后挂载到options上面  
       */
