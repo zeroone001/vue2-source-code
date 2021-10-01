@@ -66,7 +66,7 @@ export function parseHTML (html, options) {
   const stack = [] /* 这是栈，为了维护AST层级用的 */
   const expectHTML = options.expectHTML
   const isUnaryTag = options.isUnaryTag || no
-  const canBeLeftOpenTag = options.canBeLeftOpenTag || no
+  const canBeLeftOpenTag = options.canBeLeftOpenTag || no /* 用来检测一个标签是否是可以省略闭合标签的非自闭合标签 */
   let index = 0
   let last, lastTag
 
