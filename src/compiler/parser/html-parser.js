@@ -57,18 +57,29 @@ function decodeAttr (value, shouldDecodeNewlines) {
   return value.replace(re, match => decodingMap[match])
 }
 
+/* 
+  定义一些常量和变量
+  while循环
+  解析过程中用到的辅助函数
+*/
 export function parseHTML (html, options) {
-  const stack = []
+  const stack = [] /* 这是栈，为了维护AST层级用的 */
   const expectHTML = options.expectHTML
   const isUnaryTag = options.isUnaryTag || no
   const canBeLeftOpenTag = options.canBeLeftOpenTag || no
   let index = 0
   let last, lastTag
+
+  /* 最外层是一个大的while循环，对这个html字符串从头往后遍历 */
   while (html) {
     last = html
     // Make sure we're not in a plaintext content element like script/style
     if (!lastTag || !isPlainTextElement(lastTag)) {
+
       let textEnd = html.indexOf('<')
+      /* 
+        如果开头是尖括号，说明是标签类型，然后进行处理
+      */
       if (textEnd === 0) {
         // Comment:
         /* 在这里处理HTML注释 */
@@ -94,8 +105,6 @@ export function parseHTML (html, options) {
             continue
           }
         }
-
-        // http://en.wikipedia.org/wiki/Conditional_comment#Downlevel-revealed_conditional_comment
         /* 解析条件注释， */
         if (conditionalComment.test(html)) {
           const conditionalEnd = html.indexOf(']>')
@@ -106,23 +115,22 @@ export function parseHTML (html, options) {
             continue
           }
         }
-        // Doctype:
-        /* 解析DOCTYPE */
+        /* 解析 DOCTYPE */
         const doctypeMatch = html.match(doctype)
         if (doctypeMatch) {
           advance(doctypeMatch[0].length)
           continue
         }
-        // End tag:
+        /* 解析结束标签 */
         const endTagMatch = html.match(endTag)
+        /* 如果endTagMatch不是null */
         if (endTagMatch) {
           const curIndex = index
           advance(endTagMatch[0].length)
+          /* 主要是调用end()函数 */
           parseEndTag(endTagMatch[1], curIndex, index)
           continue
         }
-
-        // Start tag:
         /* 解析开始标签 */
         const startTagMatch = parseStartTag()
         if (startTagMatch) {
@@ -133,9 +141,10 @@ export function parseHTML (html, options) {
           }
           continue
         }
-      }
+      } /* end if */
 
       let text, rest, next
+      /* 从开头到第一个<出现的位置就都是文本内容了 */
       if (textEnd >= 0) {
         rest = html.slice(textEnd)
         while (
@@ -144,15 +153,21 @@ export function parseHTML (html, options) {
           !comment.test(rest) &&
           !conditionalComment.test(rest)
         ) {
-          // < in plain text, be forgiving and treat it as text
+          /**
+           * 用'<'以后的内容rest去匹配endTag、startTagOpen、comment、conditionalComment
+           * 如果都匹配不上，表示'<'是属于文本本身的内容
+           */
+          // 在'<'之后查找是否还有'<'
+          // 后面这个1代表要找第二个 ‘<’
           next = rest.indexOf('<', 1)
           if (next < 0) break
           textEnd += next
           rest = html.slice(textEnd)
-        }
+        } // 
+        // 开始到< 之间是纯文本
         text = html.substring(0, textEnd)
       }
-
+      // 整个模板字符串里没有找到`<`,说明整个模板字符串都是文本
       if (textEnd < 0) {
         text = html
       }
@@ -160,10 +175,11 @@ export function parseHTML (html, options) {
       if (text) {
         advance(text.length)
       }
-
+      // 把截取出来的text转化成textAST
       if (options.chars && text) {
         options.chars(text, index - text.length, index)
       }
+
     } else {
       let endTagLength = 0
       const stackedTag = lastTag.toLowerCase()
@@ -306,6 +322,12 @@ export function parseHTML (html, options) {
     }
   }
 
+
+  /* 
+    解析结束标签
+    这个函数主要是调用了end函数
+  
+  */
   function parseEndTag (tagName, start, end) {
     let pos, lowerCasedTagName
     if (start == null) start = index
