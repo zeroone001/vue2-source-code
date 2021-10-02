@@ -40,19 +40,35 @@ export type CodegenResult = {
   staticRenderFns: Array<string>
 };
 
+/* 
+codegen, 也就是code，generate 
+  generate 生成一个render函数
+*/
 export function generate (
   ast: ASTElement | void,
   options: CompilerOptions
 ): CodegenResult {
+
   const state = new CodegenState(options)
   // fix #11483, Root level <script> tags should not be rendered.
+  // 判断ast是否存在
+  /* 
+    主要是调用genElement函数
+  */
   const code = ast ? (ast.tag === 'script' ? 'null' : genElement(ast, state)) : '_c("div")'
   return {
     render: `with(this){return ${code}}`,
     staticRenderFns: state.staticRenderFns
   }
-}
+} /* end generate */
 
+/*  
+  genElement函数逻辑很清晰，
+  就是根据当前 AST 元素节点属性的不同从而执行不同的代码生成函数。
+  虽然元素节点属性的情况有很多种，但是最后真正创建出来的VNode无非就三种，
+  分别是元素节点，文本节点，注释节点。
+  下来我们就着重分析一下如何生成这三种节点类型的render函数的
+*/
 export function genElement (el: ASTElement, state: CodegenState): string {
   if (el.parent) {
     el.pre = el.pre || el.parent.pre
@@ -74,14 +90,17 @@ export function genElement (el: ASTElement, state: CodegenState): string {
     // component or element
     let code
     if (el.component) {
+      /* 是否是组件 */
       code = genComponent(el.component, el, state)
     } else {
+      /* element节点 */
       let data
       if (!el.plain || (el.pre && state.maybeComponent(el))) {
         data = genData(el, state)
       }
 
       const children = el.inlineTemplate ? null : genChildren(el, state, true)
+      // 生成_c（）函数调用字符串
       code = `_c('${el.tag}'${
         data ? `,${data}` : '' // data
       }${
@@ -217,6 +236,10 @@ export function genFor (
     '})'
 }
 
+/* 
+  这个函数虽然很长，但是整体就是在拼接字符串
+  获取节点属性data
+*/
 export function genData (el: ASTElement, state: CodegenState): string {
   let data = '{'
 
@@ -460,7 +483,11 @@ function genScopedSlot (
   const reverseProxy = slotScope ? `` : `,proxy:true`
   return `{key:${el.slotTarget || `"default"`},fn:${fn}${reverseProxy}}`
 }
-
+/* 
+  获取子节点列表children
+  其实就是遍历AST的children的元素，
+  然后根据元素属性的不同生成不同的VNode创建函数调用字符串
+ */
 export function genChildren (
   el: ASTElement,
   state: CodegenState,
@@ -468,6 +495,7 @@ export function genChildren (
   altGenElement?: Function,
   altGenNode?: Function
 ): string | void {
+
   const children = el.children
   if (children.length) {
     const el: any = children[0]
@@ -486,6 +514,8 @@ export function genChildren (
       ? getNormalizationType(children, state.maybeComponent)
       : 0
     const gen = altGenNode || genNode
+    // 关键这个位置
+    // 根据元素属性的不同生成不同的VNode创建函数调用字符串
     return `[${children.map(c => gen(c, state)).join(',')}]${
       normalizationType ? `,${normalizationType}` : ''
     }`
@@ -529,11 +559,17 @@ function genNode (node: ASTNode, state: CodegenState): string {
   } else if (node.type === 3 && node.isComment) {
     return genComment(node)
   } else {
+    /* type 为2 是包含变量的动态文本节点 */
     return genText(node)
   }
 }
+/* 
+  文本型的VNode可以调用_v(text)函数来创建
 
+*/
 export function genText (text: ASTText | ASTExpression): string {
+  // type 为2 是包含变量的动态文本节点 
+  // 否则就是3，纯静态文本，直接使用text属性
   return `_v(${text.type === 2
     ? text.expression // no need for () because already wrapped in _s()
     : transformSpecialNewlines(JSON.stringify(text.text))

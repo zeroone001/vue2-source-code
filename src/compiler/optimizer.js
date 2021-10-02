@@ -36,9 +36,10 @@ function genStaticKeys (keys: string): Function {
     (keys ? ',' + keys : '')
   )
 }
-
+/* 标记静态节点 */
 function markStatic (node: ASTNode) {
   node.static = isStatic(node)
+  /* 接着，如果是元素节点 */
   if (node.type === 1) {
     // do not make component slot content static. this avoids
     // 1. components not able to mutate slot nodes
@@ -50,13 +51,20 @@ function markStatic (node: ASTNode) {
     ) {
       return
     }
+    /* 递归判断子节点 */
     for (let i = 0, l = node.children.length; i < l; i++) {
       const child = node.children[i]
       markStatic(child)
       if (!child.static) {
+        // 如果当前节点的子节点有一个不是静态节点，那就把当前节点也标记为非静态节点
         node.static = false
       }
     }
+    /* 
+    循环node.children后还不算把所有子节点都遍历完，
+    因为如果当前节点的子节点中有标签带有v-if、v-else-if、v-else等指令时，
+    这些子节点在每次渲染时都只渲染一个，所以其余没有被渲染的肯定不在node.children中，
+    而是存在于node.ifConditions，所以我们还要把node.ifConditions循环一遍 */
     if (node.ifConditions) {
       for (let i = 1, l = node.ifConditions.length; i < l; i++) {
         const block = node.ifConditions[i].block
@@ -68,9 +76,10 @@ function markStatic (node: ASTNode) {
     }
   }
 }
-
+/* 标记根静态节点 */
 function markStaticRoots (node: ASTNode, isInFor: boolean) {
   if (node.type === 1) {
+    // 对于已经是 static 的节点或者是 v-once 指令的节点，node.staticInFor = isInFor
     if (node.static || node.once) {
       node.staticInFor = isInFor
     }
@@ -100,9 +109,11 @@ function markStaticRoots (node: ASTNode, isInFor: boolean) {
 }
 /* 是否为静态节点 */
 function isStatic (node: ASTNode): boolean {
+  /* 包含变量的纯文本节点 */
   if (node.type === 2) { // expression
     return false
   }
+  /* 不包含变量的纯文本节点 */
   if (node.type === 3) { // text
     return true
   }
