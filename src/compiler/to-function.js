@@ -18,6 +18,7 @@ function createFunction (code, errors) {
   }
 }
 
+/* compileToFunctions 就是在这里定义的 */
 export function createCompileToFunctionFn (compile: Function): Function {
   const cache = Object.create(null)
 

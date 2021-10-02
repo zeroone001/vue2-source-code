@@ -555,10 +555,13 @@ function needsNormalization (el: ASTElement): boolean {
 
 function genNode (node: ASTNode, state: CodegenState): string {
   if (node.type === 1) {
+    // 元素节点
     return genElement(node, state)
   } else if (node.type === 3 && node.isComment) {
+    // genComment 注释节点
     return genComment(node)
   } else {
+    // 文本节点
     /* type 为2 是包含变量的动态文本节点 */
     return genText(node)
   }
