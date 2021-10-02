@@ -23,10 +23,12 @@ export function optimize (root: ?ASTElement, options: CompilerOptions) {
   isStaticKey = genStaticKeysCached(options.staticKeys || '')
   isPlatformReservedTag = options.isReservedTag || no
   // first pass: mark all non-static nodes.
+  /* 标记静态节点 */
   markStatic(root)
   // second pass: mark static roots.
+  /* 标记静态根节点 */
   markStaticRoots(root, false)
-}
+} /* end  optimize*/
 
 function genStaticKeys (keys: string): Function {
   return makeMap(
@@ -96,7 +98,7 @@ function markStaticRoots (node: ASTNode, isInFor: boolean) {
     }
   }
 }
-
+/* 是否为静态节点 */
 function isStatic (node: ASTNode): boolean {
   if (node.type === 2) { // expression
     return false

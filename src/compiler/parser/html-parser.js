@@ -67,13 +67,25 @@ export function parseHTML (html, options) {
   const expectHTML = options.expectHTML
   const isUnaryTag = options.isUnaryTag || no
   const canBeLeftOpenTag = options.canBeLeftOpenTag || no /* 用来检测一个标签是否是可以省略闭合标签的非自闭合标签 */
-  let index = 0
-  let last, lastTag
+  let index = 0 /* 解析游标，标识当前从何处开始解析模板字符串 */
+  let last, /* 存储剩余还未解析的模板字符串 */
+    lastTag /* 存储着位于 stack 栈顶的元素 */
 
-  /* 最外层是一个大的while循环，对这个html字符串从头往后遍历 */
+  /* 
+    最外层是一个大的while循环，对这个html字符串从头往后遍历
+    开始while循环，终止条件是html字符串为空
+   */
   while (html) {
+    /* 
+      把html 给到last
+      
+    */
     last = html
     // Make sure we're not in a plaintext content element like script/style
+    /* 
+      待解析的html字符串 是不是在纯文本标签里
+      !lastTag即表示当前html字符串没有父节点
+    */
     if (!lastTag || !isPlainTextElement(lastTag)) {
 
       let textEnd = html.indexOf('<')
@@ -181,6 +193,7 @@ export function parseHTML (html, options) {
       }
 
     } else {
+      /* 如果在这几个标签里， script,style,textarea */
       let endTagLength = 0
       const stackedTag = lastTag.toLowerCase()
       const reStackedTag = reCache[stackedTag] || (reCache[stackedTag] = new RegExp('([\\s\\S]*?)(</' + stackedTag + '[^>]*>)', 'i'))
@@ -203,8 +216,11 @@ export function parseHTML (html, options) {
       html = rest
       parseEndTag(stackedTag, index - endTagLength, index)
     }
-
+    /* 经过上述所有处理逻辑处理过后，html字符串没有任何变化，
+    即表示html字符串没有匹配上任何一条规则，
+    那么就把html字符串当作纯文本对待 */
     if (html === last) {
+      // 创建文本类型的AST节点
       options.chars && options.chars(html)
       if (process.env.NODE_ENV !== 'production' && !stack.length && options.warn) {
         options.warn(`Mal-formatted tag at end of template: "${html}"`, { start: index + html.length })
@@ -214,6 +230,13 @@ export function parseHTML (html, options) {
   }
 
   // Clean up any remaining tags
+  /* 
+    这行代码是调用parseEndTag函数并不传递任何参数，
+    前面我们说过如果parseEndTag函数不传递任何参数是用于处理栈中剩余未处理的标签。
+    这是因为如果不传递任何函数，此时parseEndTag函数里的pos就为0，
+    那么pos>=0就会恒成立，
+    那么就会逐个警告缺少闭合标签，并调用 options.end将其闭合
+  */
   parseEndTag()
 
   function advance (n) {
@@ -326,7 +349,13 @@ export function parseHTML (html, options) {
   /* 
     解析结束标签
     这个函数主要是调用了end函数
-  
+    tagName: 结束标签名
+    start: 结束标签在html字符串中的起始位置
+    end: 结束标签在html字符串中的结束位置
+    这三个参数都是可选的，根据传参的不同，功能也不同
+    第一种是三个参数都传递，用于处理普通的结束标签
+    第二种是只传递tagName
+    第三种是三个参数都不传递，用于处理栈中剩余未处理的标签
   */
   function parseEndTag (tagName, start, end) {
     let pos, lowerCasedTagName
@@ -334,6 +363,11 @@ export function parseHTML (html, options) {
     if (end == null) end = index
 
     // Find the closest opened tag of the same type
+    /* 
+      如果tagName存在，那么就从后往前遍历栈，
+      在栈中寻找与tagName相同的标签并记录其所在的位置pos，
+      如果tagName不存在，则将pos置为0
+     */
     if (tagName) {
       lowerCasedTagName = tagName.toLowerCase()
       for (pos = stack.length - 1; pos >= 0; pos--) {
@@ -345,7 +379,13 @@ export function parseHTML (html, options) {
       // If no tag name is provided, clean shop
       pos = 0
     }
-
+    /* 接着当pos>=0时，开启一个for循环，
+    从栈顶位置从后向前遍历直到pos处，如果发现stack栈中存在索引大于pos的元素，
+    那么该元素一定是缺少闭合标签的。
+    这是因为在正常情况下，stack栈的栈顶元素应该和当前的结束标签tagName 匹配，
+    也就是说正常的pos应该是栈顶位置，后面不应该再有元素，如果后面还有元素，
+    那么后面的元素就都缺少闭合标签 
+    那么这个时候如果是在非生产环境会抛出警告，告诉你缺少闭合标签 */
     if (pos >= 0) {
       // Close all the open elements, up the stack
       for (let i = stack.length - 1; i >= pos; i--) {
@@ -364,8 +404,15 @@ export function parseHTML (html, options) {
       }
 
       // Remove the open elements from the stack
+      /* 最后把pos位置以后的元素都从stack栈中弹出，
+      以及把lastTag更新为栈顶元素 */
       stack.length = pos
       lastTag = pos && stack[pos - 1].tag
+
+      /* 
+      浏览器会自动把</br>标签解析为正常的 <br>标签，而对于</p>浏览器则自动将其补全为<p></p>，
+      所以Vue为了与浏览器对这两个标签的行为保持一致，故对这两个便签单独判断处理
+       */
     } else if (lowerCasedTagName === 'br') {
       if (options.start) {
         options.start(tagName, [], true, start, end)

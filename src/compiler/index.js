@@ -22,6 +22,9 @@ export const createCompiler = createCompilerCreator(function baseCompile (
     DOM-Diff 算法会直接跳过静态节点，从而减少了比较的过程，优化了 patch 的性能。
    */
   // 优化器
+  /* 
+    这是优化阶段： 遍历AST，找出静态节点，打上标记
+  */
   if (options.optimize !== false) {
     optimize(ast, options)
   }

@@ -331,6 +331,7 @@ export function parse (
     },
     /* 
       解析到文本时候，调用chars函数，生成文本类型的AST节点
+      触发钩子函数
     */
     chars (text: string, start: number, end: number) {
       if (!currentParent) {
@@ -383,13 +384,21 @@ export function parse (
         let child: ?ASTNode
         // 如果遇到文本信息，就会调用文本解析器parseText函数进行文本解析
         if (!inVPre && text !== ' ' && (res = parseText(text, delimiters))) {
+          /* 创建含有变量的AST节点 */
           child = {
             type: 2,
-            expression: res.expression,
-            tokens: res.tokens,
+            expression: res.expression, /* expression:"我叫"+_s(name)+"，我今年"+_s(age)+"岁了", */
+            tokens: res.tokens, /* tokens:[
+              "我叫",
+              {'@binding': name },
+              "，我今年"
+              {'@binding': age },
+            "岁了"
+            ] */
             text
           }
         } else if (text !== ' ' || !children.length || children[children.length - 1].text !== ' ') {
+          // 不包含变量的AST节点
           child = {
             type: 3,
             text
