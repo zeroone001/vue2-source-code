@@ -120,7 +120,7 @@ Vue.prototype.$mount = function (
  */
 function getOuterHTML (el: Element): string {
   if (el.outerHTML) {
-    return el.outerHTML
+    return el.outerHTML /* 注意这里，返回的其实是字符串 */
   } else {
     const container = document.createElement('div')
     container.appendChild(el.cloneNode(true))
