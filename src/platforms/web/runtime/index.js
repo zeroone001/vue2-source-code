@@ -30,7 +30,10 @@ Vue.config.isUnknownElement = isUnknownElement
 extend(Vue.options.directives, platformDirectives)
 extend(Vue.options.components, platformComponents)
 
-// install platform patch function
+// 这里特别重要， 在lifecycle.js 里面 调用__patch__ 也就是patch文件夹里的代码
+/* 
+  核心代码在这core/vdom/patch
+*/
 Vue.prototype.__patch__ = inBrowser ? patch : noop
 
 // public mount method

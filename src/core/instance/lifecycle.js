@@ -99,7 +99,7 @@ export function lifecycleMixin (Vue: Class<Component>) {
     }
     // updated hook is called by the scheduler to ensure that children are
     // updated in a parent's updated hook.
-  }
+  }  /* end update */
 
   /* 
     当前实例的_watcher属性就是该实例的watcher，所以要想让实例重新渲染，
@@ -237,7 +237,7 @@ export function mountComponent (
   } else {
     /* 
       关键中的关键 
-      vm._render() 生成虚拟DOM
+      vm._render() 生成虚拟DOM VNode
       vm._update() 来更新DOM
       定义函数updateComponent
       先执行vm._render()， 得到最新的VNode节点树
